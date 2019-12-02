@@ -85,6 +85,7 @@ int get_advertisement_data_from_device(OrgBluezDevice1 *bluez_device1,
 		g_variant_iter_free(iter);
 	}
 
+	/*
 	service_data_variant = org_bluez_device1_get_service_data(bluez_device1);
 	if (service_data_variant != NULL) {
 		GVariantIter *iter;
@@ -121,8 +122,9 @@ int get_advertisement_data_from_device(OrgBluezDevice1 *bluez_device1,
 		}
 		g_variant_iter_free(iter);
 	} else {
+	*/
 		*advertisement_data_count = 0;
-	}
+	//}
 
 	return GATTLIB_SUCCESS;
 }

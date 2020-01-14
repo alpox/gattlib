@@ -777,7 +777,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 		}
 
 		// Ensure the service is attached to this device
-		const char* service_object_path = org_bluez_gatt_service1_get_device(service_proxy);
+		char* service_object_path = org_bluez_gatt_service1_dup_device(service_proxy);
 		if (strcmp(conn_context->device_object_path, service_object_path)) {
 			g_object_unref(service_proxy);
 			continue;

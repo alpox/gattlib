@@ -319,11 +319,11 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
 	gattlib_context_t* conn_context = connection->context;
 	OrgBluezDevice1* device = conn_context->device;
-	const gchar* const* service_str;
+	gchar** service_str;
 	GError *error = NULL;
 	int ret = GATTLIB_SUCCESS;
 
-	const gchar* const* service_strs = org_bluez_device1_get_uuids(device);
+	gchar** service_strs = org_bluez_device1_dup_uuids(device);
 
 	if (service_strs == NULL) {
 		if (services != NULL) {

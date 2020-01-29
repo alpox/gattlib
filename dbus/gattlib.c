@@ -248,7 +248,7 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
 	gattlib_context_t* conn_context = connection->context;
 	OrgBluezDevice1* device = conn_context->device;
-	const gchar* const* service_str = NULL;
+	const gchar* const* service_str;
 	GError *error = NULL;
 
 	const gchar* const* service_strs = org_bluez_device1_get_gatt_services(device);
@@ -319,11 +319,11 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
 	gattlib_context_t* conn_context = connection->context;
 	OrgBluezDevice1* device = conn_context->device;
-	const gchar* const* service_str = NULL;
+	const gchar* const* service_str;
 	GError *error = NULL;
 	int ret = GATTLIB_SUCCESS;
 
-	const gchar* const* service_strs = org_bluez_device1_uuids(device);
+	const gchar* const* service_strs = org_bluez_device1_get_uuids(device);
 
 	if (service_strs == NULL) {
 		if (services != NULL) {
@@ -475,7 +475,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 	int handle;
 
 	const gchar* const* service_strs = org_bluez_device1_get_gatt_services(device);
-	const gchar* const* service_str = NULL;
+	const gchar* const* service_str;
 	const gchar* const* characteristic_strs;
 	const gchar* characteristic_str;
 
@@ -777,7 +777,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 		}
 
 		// Ensure the service is attached to this device
-		const char* service_object_path = org_bluez_gatt_service1_device(service_proxy);
+		const char* service_object_path = org_bluez_gatt_service1_get_device(service_proxy);
 		if (strcmp(conn_context->device_object_path, service_object_path)) {
 			g_object_unref(service_proxy);
 			continue;

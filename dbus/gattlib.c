@@ -248,7 +248,7 @@ int gattlib_disconnect(gatt_connection_t* connection) {
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
 	gattlib_context_t* conn_context = connection->context;
 	OrgBluezDevice1* device = conn_context->device;
-	const gchar* const* service_str;
+	const gchar* const* service_str = NULL;
 	GError *error = NULL;
 
 	const gchar* const* service_strs = org_bluez_device1_get_gatt_services(device);
@@ -319,7 +319,7 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
 	gattlib_context_t* conn_context = connection->context;
 	OrgBluezDevice1* device = conn_context->device;
-	gchar** service_str;
+	gchar** service_str = NULL;
 	GError *error = NULL;
 	int ret = GATTLIB_SUCCESS;
 
@@ -340,6 +340,8 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 	for (service_str = service_strs; *service_str != NULL; service_str++) {
 		count_max++;
 	}
+
+	g_strfreev(service_strs);
 
 	gattlib_primary_service_t* primary_services = malloc(count_max * sizeof(gattlib_primary_service_t));
 	if (primary_services == NULL) {

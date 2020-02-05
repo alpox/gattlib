@@ -318,33 +318,8 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 #else
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
 	gattlib_context_t* conn_context = connection->context;
-	OrgBluezDevice1* device = conn_context->device;
-	const gchar* const* service_str;
 	GError *error = NULL;
 	int ret = GATTLIB_SUCCESS;
-
-	const gchar* const* service_strs = org_bluez_device1_get_uuids(device);
-
-	if (service_strs == NULL) {
-		if (services != NULL) {
-			*services       = NULL;
-		}
-		if (services_count != NULL) {
-			*services_count = 0;
-		}
-		return GATTLIB_SUCCESS;
-	}
-
-	// Maximum number of primary services
-	int count_max = 0, count = 0;
-	for (service_str = service_strs; *service_str != NULL; service_str++) {
-		count_max++;
-	}
-
-	gattlib_primary_service_t* primary_services = malloc(count_max * sizeof(gattlib_primary_service_t));
-	if (primary_services == NULL) {
-		return GATTLIB_OUT_OF_MEMORY;
-	}
 
 	GDBusObjectManager *device_manager = g_dbus_object_manager_client_new_for_bus_sync (
 			G_BUS_TYPE_SYSTEM,
@@ -364,8 +339,29 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		goto ON_DEVICE_MANAGER_ERROR;
 	}
 
+	// Maximum number of primary services
+	int count_max = 0, count = 0;
 	GList *objects = g_dbus_object_manager_get_objects(device_manager);
 	GList *l;
+	for (l = objects; l != NULL; l = l->next)  {
+		GDBusObject *object = l->data;
+		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
+
+		GDBusInterface *interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.GattService1");
+		if (!interface) {
+			continue;
+		}
+
+		g_object_unref(interface);
+
+		count_max++;
+	}
+
+	gattlib_primary_service_t* primary_services = malloc(count_max * sizeof(gattlib_primary_service_t));
+	if (primary_services == NULL) {
+		return GATTLIB_OUT_OF_MEMORY;
+	}
+
 	for (l = objects; l != NULL; l = l->next)  {
 		GDBusObject *object = l->data;
 		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));

@@ -22,6 +22,7 @@
  */
 
 #include "gattlib_internal.h"
+#include <stdlib.h>
 
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 40)
 
@@ -46,7 +47,6 @@ int get_advertisement_data_from_device(OrgBluezDevice1 *bluez_device1,
 		uint16_t *manufacturer_id, uint8_t **manufacturer_data, size_t *manufacturer_data_size)
 {
 	GVariant *manufacturer_data_variant;
-	GVariant *service_data_variant;
 
 	if (advertisement_data == NULL) {
 		return GATTLIB_INVALID_PARAMETER;
@@ -77,7 +77,7 @@ int get_advertisement_data_from_device(OrgBluezDevice1 *bluez_device1,
 		g_variant_get(values, "ay", &iter);
 		size_t index = 0;
 
-		while (value = g_variant_iter_next_value(iter))
+		while ((value = g_variant_iter_next_value(iter)))
 		{
 			g_variant_get(value, "y", &(*manufacturer_data)[index++]);
 			g_variant_unref(value);

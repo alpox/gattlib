@@ -1,7 +1,7 @@
 #
 #  GattLib - GATT Library
 #
-#  Copyright (C) 2016-2019  Olivier Martin <olivier@labapart.org>
+#  Copyright (C) 2016-2020  Olivier Martin <olivier@labapart.org>
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -32,6 +32,7 @@ option(GATTLIB_SHARED_LIB "Build GattLib as a shared library" YES)
 option(GATTLIB_BUILD_DOCS "Build GattLib docs" YES)
 
 find_package(PkgConfig REQUIRED)
+find_package(Doxygen)
 
 # Define 'Debug' as the default build type
 if (NOT CMAKE_BUILD_TYPE)
@@ -86,6 +87,10 @@ else()
 endif()
 
 if(GATTLIB_BUILD_DOCS)
+  if (NOT Doxygen_FOUND)
+    message(FATAL_ERROR "Gattlib documentation requires Doxygen. Or disable doc generation with '-DGATTLIB_BUILD_DOCS=OFF'")
+  endif()
+
   add_subdirectory(docs)
 endif()
 
@@ -97,8 +102,10 @@ set(ENV{PKG_CONFIG_PATH} "${PROJECT_BINARY_DIR}:$ENV{PKG_CONFIG_PATH}")
 
 if(GATTLIB_BUILD_EXAMPLES)
   # Examples
+  add_subdirectory(examples/advertisement_data)
   add_subdirectory(examples/ble_scan)
   add_subdirectory(examples/discover)
+  add_subdirectory(examples/find_eddystone)
   add_subdirectory(examples/read_write)
   add_subdirectory(examples/read_write_memory)
   add_subdirectory(examples/notification)
@@ -152,7 +159,8 @@ endif()
 #
 # List of file to install
 #
-install(FILES include/gattlib.h DESTINATION include)
-install(FILES ${PROJECT_BINARY_DIR}/gattlib.pc DESTINATION lib/pkgconfig)
+include(GNUInstallDirs)
+install(FILES include/gattlib.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES ${PROJECT_BINARY_DIR}/gattlib.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
 include(CPack)

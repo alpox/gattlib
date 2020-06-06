@@ -27,7 +27,7 @@ class Device:
         else:
             self._addr = addr
         self._name = name
-        self._connection = c_void_p(None)
+        self._connection = None
 
         # Keep track if notification handler has been initialized
         self._is_notification_init = False
@@ -41,7 +41,10 @@ class Device:
 
     @property
     def connection(self):
-        return self._connection
+        if self._connection:
+            return self._connection
+        else:
+            return c_void_p(None)
 
     def connect(self, options=CONNECTION_OPTIONS_LEGACY_DEFAULT):
         if self._adapter:
@@ -49,7 +52,7 @@ class Device:
         else:
             adapter_name = None
 
-        self._connection = gattlib.gattlib_connect(adapter_name, self._addr, options)
+        self._connection = gattlib_connect(adapter_name, self._addr, options)
         if self._connection == 0:
             raise DeviceError()
 
@@ -71,10 +74,10 @@ class Device:
         self.disconnection_callback = callback
         self.disconnection_user_data = user_data
 
-        gattlib_register_on_disconnect(self._connection, Device.on_disconnection, self)
+        gattlib_register_on_disconnect(self.connection, Device.on_disconnection, self)
 
     def disconnect(self):
-        ret = gattlib.gattlib_disconnect(self._connection)
+        ret = gattlib_disconnect(self.connection)
         handle_return(ret)
 
     def discover(self):
@@ -83,7 +86,7 @@ class Device:
         #
         _services = POINTER(GattlibPrimaryService)()
         _services_count = c_int(0)
-        ret = gattlib_discover_primary(self._connection, byref(_services), byref(_services_count))
+        ret = gattlib_discover_primary(self.connection, byref(_services), byref(_services_count))
         handle_return(ret)
 
         self._services = {}
@@ -98,7 +101,7 @@ class Device:
         #
         _characteristics = POINTER(GattlibCharacteristic)()
         _characteristics_count = c_int(0)
-        ret = gattlib_discover_char(self._connection, byref(_characteristics), byref(_characteristics_count))
+        ret = gattlib_discover_char(self.connection, byref(_characteristics), byref(_characteristics_count))
         handle_return(ret)
 
         self._characteristics = {}
@@ -107,6 +110,52 @@ class Device:
             self._characteristics[characteristic.short_uuid] = characteristic
 
             logging.debug("Characteristic UUID:0x%x" % characteristic.short_uuid)
+
+    def get_advertisement_data(self):
+        _advertisement_data = POINTER(GattlibAdvertisementData)()
+        _advertisement_data_count = c_size_t(0)
+        _manufacturer_id = c_uint16(0)
+        _manufacturer_data = c_void_p(None)
+        _manufacturer_data_len = c_size_t(0)
+
+        if self._connection is None:
+            ret = gattlib_get_advertisement_data_from_mac(self._adapter._adapter, self._addr,
+                                                          byref(_advertisement_data), byref(_advertisement_data_count),
+                                                          byref(_manufacturer_id),
+                                                          byref(_manufacturer_data), byref(_manufacturer_data_len))
+        else:
+            ret = gattlib_get_advertisement_data(self._connection,
+                                                 byref(_advertisement_data), byref(_advertisement_data_count),
+                                                 byref(_manufacturer_id),
+                                                 byref(_manufacturer_data), byref(_manufacturer_data_len))
+
+        handle_return(ret)
+
+        advertisement_data = {}
+        manufacturer_data = None
+
+        for i in range(0, _advertisement_data_count.value):
+            service_data = _advertisement_data[i]
+            uuid = gattlib_uuid_to_int(service_data.uuid)
+
+            pointer_type = POINTER(c_byte * service_data.data_length)
+            c_bytearray = cast(service_data.data, pointer_type)
+
+            data = bytearray(service_data.data_length)
+            for i in range(service_data.data_length):
+                data[i] = c_bytearray.contents[i] & 0xFF
+
+            advertisement_data[uuid] = data
+
+        if _manufacturer_data_len.value > 0:
+            pointer_type = POINTER(c_byte * _manufacturer_data_len.value)
+            c_bytearray = cast(_manufacturer_data, pointer_type)
+
+            manufacturer_data = bytearray(_manufacturer_data_len.value)
+            for i in range(_manufacturer_data_len.value):
+                manufacturer_data[i] = c_bytearray.contents[i] & 0xFF
+
+        return advertisement_data, _manufacturer_id.value, manufacturer_data
 
     @property
     def services(self):
@@ -140,12 +189,12 @@ class Device:
         # for i in range(data_len):
         #    value[i] = data[i]
 
-        pointer_type = POINTER(c_byte * data_len)
+        pointer_type = POINTER(c_ubyte * data_len)
         c_bytearray = cast(data, pointer_type)
 
         value = bytearray(data_len)
         for i in range(data_len):
-            value[i] = c_bytearray.contents[i] & 0xFF
+            value[i] = c_bytearray.contents[i]
 
         # Call GATT characteristic Notification callback
         characteristic_callback['callback'](value, characteristic_callback['user_data'])

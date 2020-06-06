@@ -1,7 +1,7 @@
 #
 #  GattLib - GATT Library
 #
-#  Copyright (C) 2017-2019  Olivier Martin <olivier@labapart.org>
+#  Copyright (C) 2017-2020  Olivier Martin <olivier@labapart.org>
 #
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 #  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.0)
 
 find_package(PkgConfig REQUIRED)
 
@@ -84,6 +84,7 @@ set(gattlib_SRCS gattlib.c
                  gattlib_adapter.c
                  gattlib_advertisement.c
                  gattlib_char.c
+                 gattlib_notification.c
                  gattlib_stream.c
                  bluez5/lib/uuid.c
                  ${CMAKE_SOURCE_DIR}/common/gattlib_common.c
@@ -103,20 +104,24 @@ set(gattlib_LIBS ${GLIB_LDFLAGS} ${GIO_UNIX_LDFLAGS})
 #
 # Add Python Support
 #
-pkg_search_module(PYTHON python3)
-if (NOT PYTHON_FOUND)
-	pkg_search_module(PYTHON python)
-endif()
+find_package(Python COMPONENTS Interpreter Development)
+if (Python_Development_FOUND)
+	include_directories(${Python_INCLUDE_DIRS})
+	list(APPEND gattlib_LIBS ${Python_LIBRARIES})
 
-if (PYTHON_FOUND)
-	include_directories(${PYTHON_INCLUDE_DIRS})
-	list(APPEND gattlib_LIBS ${PYTHON_LDFLAGS})
-	
 	add_definitions(-DWITH_PYTHON)
 endif()
 
 # Gattlib
-add_library(gattlib SHARED ${gattlib_SRCS})
+if(GATTLIB_SHARED_LIB)
+  add_library(gattlib SHARED ${gattlib_SRCS})
+else()
+  add_library(gattlib ${gattlib_SRCS})
+endif()
+
+target_include_directories(gattlib PUBLIC ../include)
 target_link_libraries(gattlib ${gattlib_LIBS})
 
-install(TARGETS gattlib LIBRARY DESTINATION lib)
+include(GNUInstallDirs)
+
+install(TARGETS gattlib LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})

@@ -127,6 +127,10 @@ static int ble_scan(void *adapter, int device_desc, gattlib_discovered_device_t 
 		}
 
 		len = read(device_desc, buffer, sizeof(buffer));
+		if (len < 0) {
+			fprintf(stderr, "Read error\n");
+			break;
+		}
 
 		if (meta->subevent != 0x02 || (uint8_t)buffer[BLE_EVENT_TYPE] != BLE_SCAN_RESPONSE)
 			continue;
@@ -142,7 +146,7 @@ static int ble_scan(void *adapter, int device_desc, gattlib_discovered_device_t 
 
 		int elapsed = time(NULL) - ts;
 		if (elapsed >= timeout) {
-			printf("Err2");
+			fprintf(stderr, "Timeout error\n");
 			break;
 		}
 
@@ -162,6 +166,10 @@ static int ble_scan(void *adapter, int device_desc, gattlib_discovered_device_t 
 		}
 
 		len = read(device_desc, buffer, sizeof(buffer));
+		if (len < 0) {
+			fprintf(stderr, "Read error\n");
+			break;
+		}
 
 		if (meta->subevent != 0x02 || (uint8_t)buffer[BLE_EVENT_TYPE] != BLE_SCAN_RESPONSE)
 			continue;
@@ -181,7 +189,7 @@ static int ble_scan(void *adapter, int device_desc, gattlib_discovered_device_t 
 	return GATTLIB_SUCCESS;
 }
 
-int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data) {
+int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data) {
 	int device_desc = *(int*)adapter;
 
 	uint16_t interval = htobs(DISCOV_LE_SCAN_INT);
@@ -211,7 +219,7 @@ int gattlib_adapter_scan_enable(void* adapter, gattlib_discovered_device_t disco
 }
 
 int gattlib_adapter_scan_enable_with_filter(void *adapter, uuid_t **uuid_list, int16_t rssi_threshold, uint32_t enabled_filters,
-		gattlib_discovered_device_t discovered_device_cb, int timeout, void *user_data)
+		gattlib_discovered_device_t discovered_device_cb, size_t timeout, void *user_data)
 {
 	return GATTLIB_NOT_SUPPORTED;
 }

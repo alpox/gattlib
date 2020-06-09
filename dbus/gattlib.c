@@ -334,31 +334,29 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_service_t** services, int* services_count) {
 	gattlib_context_t* conn_context = connection->context;
 	GDBusObjectManager *device_manager = get_device_manager_from_adapter(conn_context->adapter);
-	OrgBluezDevice1* device = conn_context->device;
-	gchar** service_str;
 	GError *error = NULL;
 	int ret = GATTLIB_SUCCESS;
-
-	gchar** service_strs = org_bluez_device1_dup_uuids(device);
 
 	if (device_manager == NULL) {
 		fprintf(stderr, "Gattlib context not initialized.\n");
 		return GATTLIB_INVALID_PARAMETER;
 	}
-
-	if (service_strs == NULL) {
-		if (services != NULL) {
-			*services       = NULL;
-		}
-		if (services_count != NULL) {
-			*services_count = 0;
-		}
-		return GATTLIB_SUCCESS;
-	}
-
+	//
 	// Maximum number of primary services
 	int count_max = 0, count = 0;
-	for (service_str = service_strs; *service_str != NULL; service_str++) {
+	GList *objects = g_dbus_object_manager_get_objects(device_manager);
+	GList *l;
+	for (l = objects; l != NULL; l = l->next)  {
+		GDBusObject *object = l->data;
+		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
+
+		GDBusInterface *interface = g_dbus_object_manager_get_interface(device_manager, object_path, "org.bluez.GattService1");
+		if (!interface) {
+			continue;
+		}
+
+		g_object_unref(interface);
+
 		count_max++;
 	}
 
@@ -367,7 +365,6 @@ int gattlib_discover_primary(gatt_connection_t* connection, gattlib_primary_serv
 		return GATTLIB_OUT_OF_MEMORY;
 	}
 
-	GList *l;
 	for (l = conn_context->dbus_objects; l != NULL; l = l->next)  {
 		GDBusObject *object = l->data;
 		const char* object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object));
@@ -759,7 +756,7 @@ int gattlib_discover_char_range(gatt_connection_t* connection, int start, int en
 		}
 
 		// Ensure the service is attached to this device
-		char* service_object_path = org_bluez_gatt_service1_dup_device(service_proxy);
+		const char* service_object_path = org_bluez_gatt_service1_get_device(service_proxy);
 		if (strcmp(conn_context->device_object_path, service_object_path)) {
 			g_object_unref(service_proxy);
 			continue;

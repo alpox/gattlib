@@ -22,6 +22,7 @@
  */
 
 #include "gattlib_internal.h"
+#include <stdlib.h>
 
 #if BLUEZ_VERSION < BLUEZ_VERSIONS(5, 40)
 

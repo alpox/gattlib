@@ -58,11 +58,13 @@ gboolean on_handle_device_property_change(
 				}
 			} else if (strcmp(key, "ServicesResolved") == 0) {
 				if (g_variant_get_boolean(value)) {
-					// Stop the timeout for connection
-					g_source_remove(conn_context->connection_timeout);
+					if(conn_context->connection_loop != NULL) {
+						// Stop the timeout for connection
+						g_source_remove(conn_context->connection_timeout);
 
-					// Tell we are now connected
-					g_main_loop_quit(conn_context->connection_loop);
+						// Tell we are now connected
+						g_main_loop_quit(conn_context->connection_loop);
+					}
 				}
 			}
 		}
@@ -179,7 +181,7 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 		connection);
 
 	error = NULL;
-	org_bluez_device1_call_connect_sync(device, NULL, &error);
+	bool success = org_bluez_device1_call_connect_sync(device, NULL, &error);
 	if (error) {
 		if (strncmp(error->message, m_dbus_error_unknown_object, strlen(m_dbus_error_unknown_object)) == 0) {
 			// You might have this error if the computer has not scanned or has not already had
@@ -193,6 +195,11 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 
 		g_error_free(error);
 		goto FREE_DEVICE;
+	}
+
+	if(!success) {
+		fprintf(stderr, "Failed to connect to the device'%s'.", dst);
+		return NULL;
 	}
 
 	// Wait for the property 'UUIDs' to be changed. We assume 'org.bluez.GattService1

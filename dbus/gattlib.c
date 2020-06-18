@@ -28,7 +28,7 @@
 
 #include "gattlib_internal.h"
 
-#define CONNECT_TIMEOUT  5
+#define CONNECT_TIMEOUT  12
 
 static const char *m_dbus_error_unknown_object = "GDBus.Error:org.freedesktop.DBus.Error.UnknownObject";
 

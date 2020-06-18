@@ -28,7 +28,7 @@
 
 #include "gattlib_internal.h"
 
-#define CONNECT_TIMEOUT  12
+#define CONNECT_TIMEOUT  4
 
 static const char *m_dbus_error_unknown_object = "GDBus.Error:org.freedesktop.DBus.Error.UnknownObject";
 
@@ -223,10 +223,12 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	// Set the attribute to NULL even if not required
 	conn_context->connection_loop = NULL;
 
+/*
 	if(!conn_context->success) {
 		fprintf(stderr, "Connection establishing timed out.\n");
 		goto DISCONNECT_DEVICE;
 	}
+*/
 
 	// Get list of objects belonging to Device Manager
 	device_manager = get_device_manager_from_adapter(conn_context->adapter);
@@ -234,6 +236,7 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 
 	return connection;
 
+/*
 DISCONNECT_DEVICE:
 	org_bluez_device1_call_disconnect_sync(conn_context->device, NULL, &error);
 	if (error) {
@@ -243,6 +246,7 @@ DISCONNECT_DEVICE:
 
 	g_list_free_full(conn_context->dbus_objects, g_object_unref);
 	disconnect_all_notifications(conn_context);
+*/
 
 FREE_DEVICE:
 	free(conn_context->device_object_path);

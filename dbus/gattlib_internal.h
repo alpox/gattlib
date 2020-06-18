@@ -57,6 +57,7 @@ typedef struct {
 	GMainLoop *connection_loop;
 	// ID of the timeout to know if we managed to connect to the device
 	guint connection_timeout;
+	bool success;
 
 	// List of DBUS Object managed by 'adapter->device_manager'
 	GList *dbus_objects;

@@ -28,7 +28,7 @@
 
 #include "gattlib_internal.h"
 
-#define CONNECT_TIMEOUT  4
+#define CONNECT_TIMEOUT  5
 
 static const char *m_dbus_error_unknown_object = "GDBus.Error:org.freedesktop.DBus.Error.UnknownObject";
 
@@ -61,6 +61,8 @@ gboolean on_handle_device_property_change(
 					if(conn_context->connection_loop != NULL) {
 						// Stop the timeout for connection
 						g_source_remove(conn_context->connection_timeout);
+
+						conn_context->success = true;
 
 						// Tell we are now connected
 						g_main_loop_quit(conn_context->connection_loop);
@@ -118,6 +120,14 @@ void get_device_path_from_mac(const char *adapter_name, const char *mac_address,
 
 	// Generate object path like: /org/bluez/hci0/dev_DA_94_40_95_E0_87
 	snprintf(object_path, object_path_len, "/org/bluez/%s/dev_%s", adapter, device_address_str);
+}
+
+gboolean stop_connection_loop(gpointer data) 
+{
+	gattlib_context_t *conn_context = data;
+	conn_context->success = false;
+	g_main_loop_quit(conn_context->connection_loop);
+	return FALSE;
 }
 
 /**
@@ -198,26 +208,41 @@ gatt_connection_t *gattlib_connect(void* adapter, const char *dst, unsigned long
 	}
 
 	if(!success) {
-		fprintf(stderr, "Failed to connect to the device'%s'.", dst);
-		return NULL;
+		fprintf(stderr, "Failed to connect to the device'%s'.\n", dst);
+		goto FREE_DEVICE;
 	}
 
 	// Wait for the property 'UUIDs' to be changed. We assume 'org.bluez.GattService1
 	// and 'org.bluez.GattCharacteristic1' to be advertised at that moment.
 	conn_context->connection_loop = g_main_loop_new(NULL, 0);
 
-	conn_context->connection_timeout = g_timeout_add_seconds(CONNECT_TIMEOUT, stop_scan_func,
-								 conn_context->connection_loop);
+	conn_context->connection_timeout = g_timeout_add_seconds(CONNECT_TIMEOUT, stop_connection_loop,
+								 conn_context);
 	g_main_loop_run(conn_context->connection_loop);
 	g_main_loop_unref(conn_context->connection_loop);
 	// Set the attribute to NULL even if not required
 	conn_context->connection_loop = NULL;
+
+	if(!conn_context->success) {
+		fprintf(stderr, "Connection establishing timed out.\n");
+		goto DISCONNECT_DEVICE;
+	}
 
 	// Get list of objects belonging to Device Manager
 	device_manager = get_device_manager_from_adapter(conn_context->adapter);
 	conn_context->dbus_objects = g_dbus_object_manager_get_objects(device_manager);
 
 	return connection;
+
+DISCONNECT_DEVICE:
+	org_bluez_device1_call_disconnect_sync(conn_context->device, NULL, &error);
+	if (error) {
+		fprintf(stderr, "Failed to disconnect DBus Bluez Device: %s\n", error->message);
+		g_error_free(error);
+	}
+
+	g_list_free_full(conn_context->dbus_objects, g_object_unref);
+	disconnect_all_notifications(conn_context);
 
 FREE_DEVICE:
 	free(conn_context->device_object_path);
